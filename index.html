@@ -3,547 +3,169 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Daily Scan</title>
+<title>The Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root{
+    --bg:#F4F1EA; --surface:#FFFFFF; --surface-alt:#FAF8F3;
+    --navy:#16233D; --navy-soft:#33425f;
+    --ink:#1C2430; --muted:#6B7280; --line:#E4DFD3;
+    --gain:#1B7A4B; --loss:#A32F2F;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:'Inter',system-ui,-apple-system,sans-serif;
+    font-size:15px; line-height:1.55; padding-bottom:78px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono',ui-monospace,monospace; font-variant-numeric:tabular-nums;}
+  .gain{color:var(--gain);} .loss{color:var(--loss);} .flat{color:var(--muted);}
 
-  :root {
-    --bg:        #0f1117;
-    --surface:   #181c27;
-    --border:    #262c3d;
-    --text:      #e2e8f0;
-    --muted:     #64748b;
-    --accent:    #3b82f6;
-    --up:        #22c55e;
-    --down:      #ef4444;
-    --up-mild:   #86efac;
-    --down-mild: #fca5a5;
-    --flag-bg:   #1f1210;
-    --flag-bdr:  #ef4444;
-    --news-bg:   #13112a;
-    --news-bdr:  #a78bfa;
-    --news-clr:  #c4b5fd;
-    --warn:      #f59e0b;
-    --good:      #22c55e;
-    --opp-bdr:   #06b6d4;
-    --edgar-bg:  #0e1626;
-    --edgar-bdr: #3b82f6;
-    --edgar-clr: #93c5fd;
-  }
+  /* ticker tape: the signature element */
+  .tape{background:var(--navy); color:#E7E0D0; overflow:hidden; white-space:nowrap; border-bottom:1px solid #0d1424;}
+  .tape-track{display:inline-block; padding:8px 0; animation:tape 65s linear infinite; will-change:transform;}
+  .tape:hover .tape-track{animation-play-state:paused;}
+  @keyframes tape{from{transform:translateX(0);} to{transform:translateX(-50%);}}
+  .tape-item{font-family:'IBM Plex Mono',monospace; font-size:12.5px; padding:0 4px;}
+  .tape-tkr{font-weight:600; margin-right:7px; letter-spacing:.05em; color:#F4F1EA;}
+  .tape-item span{margin-right:6px;}
+  .tape-item .gain{color:#79CB9C;} .tape-item .loss{color:#E39C9C;}
+  .tape-sep{color:#54637f; padding:0 12px;}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
-    font-size: 14px;
-    line-height: 1.6;
-    padding: 40px 24px 80px;
-    max-width: 1000px;
-    margin: 0 auto;
-  }
+  /* masthead */
+  .wrap{max-width:1080px; margin:0 auto; padding:0 18px;}
+  .masthead{padding:24px 0 16px;}
+  .masthead h1{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:29px; letter-spacing:.005em; color:var(--navy);}
+  .masthead .tag{font-size:13px; color:var(--muted); margin-top:3px;}
+  .masthead .stamp{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted); margin-top:10px;}
 
-  /* ── header ── */
-  .header {
-    display: flex;
-    align-items: baseline;
-    gap: 16px;
-    margin-bottom: 32px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 20px;
-  }
-  .header h1 {
-    font-size: 20px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--text);
-  }
-  .header .stamp {
-    font-size: 12px;
-    color: var(--muted);
-    margin-left: auto;
-  }
+  /* tabs: MOBILE = fixed bottom app bar */
+  .tabs{position:fixed; bottom:0; left:0; right:0; display:flex; background:var(--surface);
+        border-top:1px solid var(--line); z-index:30; box-shadow:0 -1px 6px rgba(22,35,61,.05);}
+  .tab-btn{flex:1; border:none; background:none; padding:11px 2px 13px; cursor:pointer;
+           font-family:'Inter',sans-serif; font-size:11px; font-weight:600; letter-spacing:.02em;
+           color:var(--muted); text-align:center;}
+  .tab-btn.active{color:var(--navy);}
+  .tab-btn.active::after{content:""; display:block; height:2px; width:26px; margin:5px auto 0;
+                         background:var(--navy); border-radius:2px;}
+  .tab-count{font-family:'IBM Plex Mono',monospace; font-size:9.5px; color:var(--muted);}
 
-  /* ── macro strip ── */
-  .macro {
-    display: flex;
-    align-items: center;
-    gap: 20px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 16px 22px;
-    margin-bottom: 28px;
-  }
-  .macro-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted);
-    white-space: nowrap;
-  }
-  .macro-val {
-    font-size: 26px;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-    color: var(--text);
-    white-space: nowrap;
-  }
-  .macro-divider {
-    width: 1px;
-    height: 32px;
-    background: var(--border);
-  }
-  .macro-ctx {
-    font-size: 13px;
-    color: var(--muted);
-  }
-  .macro-ctx.warn { color: var(--warn); }
-  .macro-ctx.good { color: var(--good); }
-  .macro-date {
-    font-size: 11px;
-    color: var(--muted);
-    margin-left: auto;
-    white-space: nowrap;
-  }
+  /* sections + cards */
+  main{padding:8px 0 10px;}
+  .tab-section{display:none;}
+  .tab-section.active{display:block;}
+  .section-title{font-family:'Fraunces',Georgia,serif; font-weight:600; font-size:20px;
+                 color:var(--navy); margin:6px 0 14px;}
+  .empty{color:var(--muted); font-size:14px; padding:16px 2px;}
 
-  /* ── summary bar ── */
-  .summary {
-    font-size: 12px;
-    color: var(--muted);
-    margin-bottom: 16px;
-    padding-left: 2px;
-  }
-  .summary .flagged-count { color: var(--down);     font-weight: 600; }
-  .summary .news-count    { color: var(--news-clr); font-weight: 600; }
-  .summary .ok-count      { color: var(--muted); }
+  .card{background:var(--surface); border:1px solid var(--line); border-radius:10px;
+        margin-bottom:10px; overflow:hidden;}
+  .card[open]{border-color:#cfd7e3; box-shadow:0 1px 3px rgba(22,35,61,.07);}
+  .card-summary{list-style:none; cursor:pointer; display:flex; align-items:center;
+                gap:10px; padding:14px 16px; flex-wrap:wrap;}
+  .card-summary::-webkit-details-marker{display:none;}
+  .card-summary::after{content:"\203A"; margin-left:auto; color:var(--muted);
+                       font-size:20px; line-height:1; transform:rotate(90deg); transition:transform .15s;}
+  .card[open] .card-summary::after{transform:rotate(-90deg);}
+  .c-tkr{font-family:'IBM Plex Mono',monospace; font-weight:600; font-size:15px;
+         color:var(--navy); letter-spacing:.04em; min-width:54px;}
+  .c-px{font-family:'IBM Plex Mono',monospace; font-size:14px; font-weight:500;}
+  .c-chg{font-family:'IBM Plex Mono',monospace; font-size:13px; font-weight:600;}
+  .macro-word{font-size:12.5px; font-weight:600; color:var(--navy);}
+  .c-take{flex-basis:100%; font-size:13px; color:var(--muted); line-height:1.5;}
 
-  /* ── section divider (opportunity scan header) ── */
-  .section-divider {
-    display: flex;
-    align-items: baseline;
-    gap: 14px;
-    margin-top: 52px;
-    margin-bottom: 20px;
-    padding-bottom: 14px;
-    border-bottom: 1px solid var(--opp-bdr);
-  }
-  .section-divider h2 {
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    color: var(--opp-bdr);
-  }
-  .section-sub {
-    font-size: 12px;
-    color: var(--muted);
-  }
+  .card-detail{padding:2px 16px 15px; border-top:1px solid var(--line); background:var(--surface-alt);}
+  .d-row{display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--line);}
+  .d-row:last-child{border-bottom:none;}
+  .d-label{flex:0 0 82px; font-size:10.5px; text-transform:uppercase; letter-spacing:.07em;
+           color:var(--muted); padding-top:3px;}
+  .d-val{flex:1; font-size:13.5px; line-height:1.5;}
+  .d-val.mono{font-family:'IBM Plex Mono',monospace;}
+  .d-sub{font-size:12.5px; color:var(--muted); margin-top:5px; line-height:1.55;}
+  .d-exch{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);}
+  .d-score{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--muted);}
 
-  /* ── table ── */
-  table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-  thead th {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    color: var(--muted);
-    text-align: left;
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border);
-  }
-  tbody tr {
-    border-bottom: 1px solid var(--border);
-    transition: background 0.1s;
-  }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: rgba(255,255,255,0.025); }
+  .badge{display:inline-block; font-size:10px; font-weight:600; letter-spacing:.05em;
+         text-transform:uppercase; border-radius:4px; padding:2px 7px; margin:0 5px 5px 0; border:1px solid;}
+  .b-gain{color:var(--gain); border-color:rgba(27,122,75,.35); background:rgba(27,122,75,.08);}
+  .b-loss{color:var(--loss); border-color:rgba(163,47,47,.35); background:rgba(163,47,47,.08);}
+  .b-vol{color:#8a6d1f; border-color:rgba(138,109,31,.35); background:rgba(138,109,31,.08);}
+  .b-tech{color:var(--navy); border-color:rgba(22,35,61,.28); background:rgba(22,35,61,.06);}
+  .b-news{color:var(--navy); border-color:rgba(22,35,61,.28); background:rgba(22,35,61,.06);}
+  .b-edgar-buy{color:var(--gain); border-color:rgba(27,122,75,.35); background:rgba(27,122,75,.08);}
+  .b-edgar-sell{color:#8a6d1f; border-color:rgba(138,109,31,.35); background:rgba(138,109,31,.08);}
+  .b-edgar-event{color:var(--navy); border-color:rgba(22,35,61,.28); background:rgba(22,35,61,.06);}
 
-  tbody td {
-    padding: 14px 12px;
-    vertical-align: top;
-  }
+  .foot{color:var(--muted); font-size:11px; border-top:1px solid var(--line);
+        margin-top:18px; padding:18px 18px 34px; line-height:1.6;}
 
-  /* row states */
-  .row-flagged {
-    background: var(--flag-bg);
-    border-left: 3px solid var(--flag-bdr);
-  }
-  .row-news {
-    background: var(--news-bg);
-    border-left: 3px solid var(--news-bdr);
-  }
-  .row-edgar {
-    background: var(--edgar-bg);
-    border-left: 3px solid var(--edgar-bdr);
-  }
-  .row-ok {
-    border-left: 3px solid transparent;
-  }
-  .row-opp {
-    border-left: 3px solid var(--opp-bdr);
-  }
-
-  /* cells */
-  .sym {
-    font-weight: 700;
-    font-size: 14px;
-    letter-spacing: 0.02em;
-    white-space: nowrap;
-    min-width: 100px;
-  }
-  .co-name {
-    display: block;
-    font-size: 11px;
-    font-weight: 400;
-    color: var(--muted);
-    margin-top: 2px;
-    letter-spacing: 0;
-  }
-  .price {
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    min-width: 80px;
-  }
-  .pct {
-    font-variant-numeric: tabular-nums;
-    font-weight: 600;
-    white-space: nowrap;
-    min-width: 70px;
-  }
-  .pct.up        { color: var(--up); }
-  .pct.down      { color: var(--down); }
-  .pct.up-mild   { color: var(--up-mild); }
-  .pct.down-mild { color: var(--down-mild); }
-
-  .vol {
-    font-variant-numeric: tabular-nums;
-    white-space: nowrap;
-    min-width: 90px;
-  }
-  .vol-ratio {
-    display: block;
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 2px;
-  }
-
-  .flag-cell { min-width: 120px; }
-
-  /* watchlist badges */
-  .badge-flag {
-    display: inline-block;
-    background: rgba(239,68,68,0.15);
-    color: var(--down);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .badge-news {
-    display: inline-block;
-    background: rgba(167,139,250,0.15);
-    color: var(--news-clr);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    border: 1px solid rgba(167,139,250,0.35);
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .badge-ok {
-    display: inline-block;
-    background: transparent;
-    color: var(--muted);
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.06em;
-    border: 1px solid var(--border);
-    border-radius: 4px; padding: 2px 7px;
-  }
-  .flag-detail {
-    display: block;
-    font-size: 11px;
-    color: var(--warn);
-    margin-top: 3px;
-  }
-
-  /* opportunity scan badges */
-  .badge-opp-gainer {
-    display: inline-block;
-    background: rgba(34,197,94,0.12);
-    color: var(--up);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    border: 1px solid rgba(34,197,94,0.3);
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .badge-opp-loser {
-    display: inline-block;
-    background: rgba(239,68,68,0.12);
-    color: var(--down);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    border: 1px solid rgba(239,68,68,0.3);
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .badge-opp-active {
-    display: inline-block;
-    background: rgba(245,158,11,0.12);
-    color: var(--warn);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    border: 1px solid rgba(245,158,11,0.3);
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .badge-opp-tech {
-    display: inline-block;
-    background: rgba(6,182,212,0.12);
-    color: var(--opp-bdr);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    border: 1px solid rgba(6,182,212,0.3);
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .score-pip {
-    display: block;
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 3px;
-  }
-
-  .take {
-    font-size: 12px;
-    color: var(--muted);
-    line-height: 1.5;
-    max-width: 300px;
-  }
-  .news-headline {
-    display: block;
-    font-size: 11px;
-    color: var(--news-clr);
-    margin-top: 5px;
-    line-height: 1.4;
-    font-style: italic;
-  }
-  .tech-note {
-    display: block;
-    font-size: 11px;
-    color: var(--opp-bdr);
-    margin-top: 6px;
-    line-height: 1.45;
-  }
-  .tech-note-na {
-    display: block;
-    font-size: 11px;
-    color: var(--muted);
-    margin-top: 6px;
-    line-height: 1.45;
-    font-style: italic;
-  }
-  .edgar-note {
-    display: block;
-    font-size: 11px;
-    color: var(--edgar-clr);
-    margin-top: 6px;
-    line-height: 1.45;
-  }
-
-  /* EDGAR badges — visually distinct from price/vol (red) and news (purple) */
-  .badge-edgar-buy, .badge-edgar-sell, .badge-edgar-event {
-    display: inline-block;
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 0.06em; text-transform: uppercase;
-    border-radius: 4px; padding: 2px 7px;
-    margin-right: 4px; margin-bottom: 4px;
-  }
-  .badge-edgar-buy {
-    background: rgba(34,197,94,0.15);  color: var(--good);
-    border: 1px solid rgba(34,197,94,0.35);
-  }
-  .badge-edgar-sell {
-    background: rgba(245,158,11,0.15); color: var(--warn);
-    border: 1px solid rgba(245,158,11,0.35);
-  }
-  .badge-edgar-event {
-    background: rgba(59,130,246,0.15); color: var(--edgar-clr);
-    border: 1px solid rgba(59,130,246,0.4);
-  }
-
-  /* ── footer ── */
-  .footer {
-    margin-top: 40px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--muted);
+  /* DESKTOP = top static nav + multi-column card grid (a genuinely different layout) */
+  @media(min-width:820px){
+    body{padding-bottom:0; font-size:15px;}
+    .masthead{padding:34px 0 18px;}
+    .masthead h1{font-size:40px;}
+    .tabs{position:static; max-width:1080px; margin:0 auto; padding:0 18px;
+          background:none; border-top:none; border-bottom:1px solid var(--line); box-shadow:none; gap:26px;}
+    .tab-btn{flex:0 0 auto; padding:13px 0; font-size:13px; text-align:left;}
+    .tab-btn.active::after{margin:7px 0 0; width:100%;}
+    main{padding:22px 0 10px;}
+    .cards-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr));
+                gap:12px; align-items:start;}
+    .cards-grid .card{margin-bottom:0;}
+    .macro-card, .news-list .card{max-width:640px;}
   }
 </style>
 </head>
 <body>
-
-<div class="header">
-  <h1>Daily Scan</h1>
-  <span class="stamp">Generated July 08, 2026 · 14:04</span>
-</div>
-
-<div class="macro">
-  <div>
-    <div class="macro-label">10-Year Treasury Yield &nbsp;·&nbsp; FRED DGS10</div>
-    <div class="macro-val">4.48%</div>
-  </div>
-  <div class="macro-divider"></div>
-  <div class="macro-ctx neutral">Neutral range — no outsized macro signal today.</div>
-  <div class="macro-date">as of 2026-07-06</div>
-</div>
-
-<div class="summary">
-  <span class="flagged-count">1 price/vol flagged</span>
-  &nbsp;·&nbsp;
-  <span class="news-count">1 news flagged</span>
-  &nbsp;·&nbsp;
-  <span class="ok-count">6 tickers scanned</span>
-</div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th>Price</th>
-      <th>Change</th>
-      <th>Volume</th>
-      <th>Status</th>
-      <th>Take</th>
-    </tr>
-  </thead>
-  <tbody>
-        <tr class="row-ok">
-          <td class="sym">NVDA<span class="co-name">NVIDIA Corporation</span></td>
-          <td class="price">$202.41</td>
-          <td class="pct up-mild">+2.78%</td>
-          <td class="vol">86.2M<span class="vol-ratio">0.5x avg</span></td>
-          <td class="flag-cell"><span class="badge-ok">ok</span></td>
-          <td class="take">Quiet session — price and volume within normal range.</td>
-        </tr>
-        <tr class="row-flagged">
-          <td class="sym">DELL<span class="co-name">Dell Technologies Inc.</span></td>
-          <td class="price">$433.63</td>
-          <td class="pct up">+3.92%</td>
-          <td class="vol">7.6M<span class="vol-ratio">0.9x avg</span></td>
-          <td class="flag-cell"><span class="badge-flag">FLAGGED</span><span class="badge-edgar-event">EDGAR 8-K</span><span class="flag-detail">price up 3.9%</span></td>
-          <td class="take">3.9% rally exceeds the 3% threshold.<span class="edgar-note">▸ SEC EDGAR — 8-K: financial exhibits</span></td>
-        </tr>
-        <tr class="row-edgar">
-          <td class="sym">CRWD<span class="co-name">CrowdStrike Holdings, Inc.</span></td>
-          <td class="price">$189.59</td>
-          <td class="pct down-mild">-2.58%</td>
-          <td class="vol">4.7M<span class="vol-ratio">0.3x avg</span></td>
-          <td class="flag-cell"><span class="badge-edgar-sell">EDGAR INSIDER SELL</span></td>
-          <td class="take">Quiet session — price and volume within normal range.<span class="edgar-note">▸ SEC EDGAR — insider selling: 3 open-market sale(s) in 7d</span></td>
-        </tr>
-        <tr class="row-news">
-          <td class="sym">CAT<span class="co-name">Caterpillar Inc.</span></td>
-          <td class="price">$942.77</td>
-          <td class="pct up-mild">+0.28%</td>
-          <td class="vol">1.4M<span class="vol-ratio">0.5x avg</span></td>
-          <td class="flag-cell"><span class="badge-news">M&A</span></td>
-          <td class="take">Price and volume within normal range.<span class="news-headline">[M&A] Caterpillar acquires Skycatch to expand mining technology portfolio</span></td>
-        </tr>
-        <tr class="row-ok">
-          <td class="sym">ORCL<span class="co-name">Oracle Corporation</span></td>
-          <td class="price">$138.70</td>
-          <td class="pct down-mild">-2.05%</td>
-          <td class="vol">18.2M<span class="vol-ratio">0.6x avg</span></td>
-          <td class="flag-cell"><span class="badge-ok">ok</span></td>
-          <td class="take">Quiet session — price and volume within normal range.</td>
-        </tr>
-        <tr class="row-ok">
-          <td class="sym">MRVL<span class="co-name">Marvell Technology, Inc.</span></td>
-          <td class="price">$234.06</td>
-          <td class="pct up-mild">+1.46%</td>
-          <td class="vol">17.2M<span class="vol-ratio">0.4x avg</span></td>
-          <td class="flag-cell"><span class="badge-ok">ok</span></td>
-          <td class="take">Quiet session — price and volume within normal range.</td>
-        </tr>
-  </tbody>
-</table>
-
-
-<div class="section-divider">
-  <h2>Opportunity Scan</h2>
-  <span class="section-sub">Market-wide signals outside your watchlist &nbsp;·&nbsp; top 5 by criteria count</span>
-</div>
-
-<table>
-  <thead>
-    <tr>
-      <th>Ticker</th>
-      <th>Price</th>
-      <th>Change</th>
-      <th>Volume</th>
-      <th>Signals</th>
-      <th>Take</th>
-    </tr>
-  </thead>
-  <tbody>
-        <tr class="row-opp">
-          <td class="sym">UMC<span class="co-name">United Microelectronics Corporation</span></td>
-          <td class="price">$24.84</td>
-          <td class="pct up">+6.09%</td>
-          <td class="vol">9.8M<span class="vol-ratio">0.6x avg</span></td>
-          <td class="flag-cell"><span class="badge-opp-gainer">GAINER</span><span class="badge-opp-tech">TECH/SEMI</span><span class="score-pip">2/4 signals</span></td>
-          <td class="take">top gainer market-wide at +6.1%; Semiconductors.<span class="tech-note">▸ RSI 55, price above VWAP, above Bollinger mid, above 50/200-day MAs, golden-cross trend, MACD bearish, ATR 7.0% of price</span></td>
-        </tr>
-        <tr class="row-opp">
-          <td class="sym">AVGO<span class="co-name">Broadcom Inc.</span></td>
-          <td class="price">$390.12</td>
-          <td class="pct up">+5.21%</td>
-          <td class="vol">19.7M<span class="vol-ratio">0.7x avg</span></td>
-          <td class="flag-cell"><span class="badge-opp-gainer">GAINER</span><span class="badge-opp-active">VOL</span><span class="badge-opp-tech">TECH/SEMI</span><span class="score-pip">2/4 signals</span></td>
-          <td class="take">top gainer market-wide at +5.2%; Semiconductors.<span class="tech-note">▸ RSI 51, price above VWAP, above Bollinger mid, below 50-day MA, golden-cross trend, MACD bullish, ATR 4.7% of price — momentum building</span></td>
-        </tr>
-        <tr class="row-opp">
-          <td class="sym">PENG<span class="co-name">Penguin Solutions, Inc.</span></td>
-          <td class="price">$77.84</td>
-          <td class="pct up">+24.13%</td>
-          <td class="vol">10.3M<span class="vol-ratio">3.3x avg</span></td>
-          <td class="flag-cell"><span class="badge-opp-gainer">GAINER</span><span class="badge-opp-tech">TECH/SEMI</span><span class="badge-edgar-event">EDGAR 8-K</span><span class="score-pip">1/4 signals</span></td>
-          <td class="take">top gainer market-wide at +24.1%; Information Technology Services.<span class="tech-note">▸ RSI 62, price above VWAP, near upper Bollinger Band, above 50/200-day MAs, golden-cross trend, MACD bearish, ATR 10.7% of price — stretched to the upside</span><span class="edgar-note">▸ SEC EDGAR — 8-K: earnings results</span></td>
-        </tr>
-        <tr class="row-opp">
-          <td class="sym">KC<span class="co-name">Kingsoft Cloud Holdings Limited</span></td>
-          <td class="price">$10.62</td>
-          <td class="pct up">+12.45%</td>
-          <td class="vol">3.5M<span class="vol-ratio">2.5x avg</span></td>
-          <td class="flag-cell"><span class="badge-opp-gainer">GAINER</span><span class="badge-opp-tech">TECH/SEMI</span><span class="score-pip">1/4 signals</span></td>
-          <td class="take">top gainer market-wide at +12.4%; Software - Application.<span class="tech-note">▸ RSI 50, price above VWAP, above Bollinger mid, below 50/200-day MAs, death-cross trend, MACD bullish, ATR 5.9% of price</span></td>
-        </tr>
-        <tr class="row-opp">
-          <td class="sym">BABA<span class="co-name">Alibaba Group Holding Limited</span></td>
-          <td class="price">$109.34</td>
-          <td class="pct up">+11.42%</td>
-          <td class="vol">29.2M<span class="vol-ratio">2.5x avg</span></td>
-          <td class="flag-cell"><span class="badge-opp-gainer">GAINER</span><span class="badge-opp-active">VOL</span><span class="score-pip">2/4 signals</span></td>
-          <td class="take">top gainer market-wide at +11.4%; 2.5x avg volume.<span class="tech-note">▸ RSI 51, price above VWAP, above Bollinger mid, below 50/200-day MAs, death-cross trend, MACD bullish, ATR 3.7% of price — momentum building</span></td>
-        </tr>
-  </tbody>
-</table>
-
-<div class="footer">
-  Data: yfinance (primary) with Financial Modeling Prep (FMP) fallback &nbsp;·&nbsp; Macro: FRED (Federal Reserve Bank of St. Louis)
-  &nbsp;·&nbsp; Price/vol flags: &gt;3.0% move or &gt;1.5× avg volume.
-  &nbsp;·&nbsp; News flags: earnings, upgrade/downgrade, M&amp;A, guidance within 24 h.
-  &nbsp;·&nbsp; Opportunity scan: ranked by criteria count (biggest gainer · biggest loser · unusual vol · tech/semi).
-  &nbsp;·&nbsp; Technicals (RSI · MACD · VWAP · Bollinger · 50/200-day MA · ATR) via TradingView, top 5 candidates only.
-  &nbsp;·&nbsp; EDGAR (SEC): insider Form 4 (open-market buys/sells, last 7 d) and 8-K events (last 48 h).
-</div>
-
+<div class="tape"><div class="tape-track"><span class="tape-item"><span class="tape-tkr">NVDA</span><span>$204.12</span><span class="gain">+3.65%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">DELL</span><span>$431.97</span><span class="gain">+3.52%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">CRWD</span><span>$191.12</span><span class="loss">-1.80%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">CAT</span><span>$948.08</span><span class="gain">+0.85%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">ORCL</span><span>$140.49</span><span class="loss">-0.78%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">MRVL</span><span>$231.71</span><span class="gain">+0.44%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">US10Y</span><span>4.55%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">NVDA</span><span>$204.12</span><span class="gain">+3.65%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">DELL</span><span>$431.97</span><span class="gain">+3.52%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">CRWD</span><span>$191.12</span><span class="loss">-1.80%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">CAT</span><span>$948.08</span><span class="gain">+0.85%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">ORCL</span><span>$140.49</span><span class="loss">-0.78%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">MRVL</span><span>$231.71</span><span class="gain">+0.44%</span></span><span class="tape-sep">&bull;</span><span class="tape-item"><span class="tape-tkr">US10Y</span><span>4.55%</span></span></div></div>
+<header class="wrap masthead">
+  <h1>The Terminal</h1>
+  <div class="tag">Daily market intelligence.</div>
+  <div class="stamp">Generated July 08, 2026 at 19:12</div>
+</header>
+<nav class="tabs">
+  <button class="tab-btn active" data-tab="tab-watchlist">Watchlist <span class="tab-count">6</span></button>
+  <button class="tab-btn" data-tab="tab-opp">Opportunity <span class="tab-count">5</span></button>
+  <button class="tab-btn" data-tab="tab-macro">Macro</button>
+  <button class="tab-btn" data-tab="tab-news">News <span class="tab-count">1</span></button>
+</nav>
+<main class="wrap">
+  <section id="tab-watchlist" class="tab-section active">
+    <h2 class="section-title">Watchlist</h2>
+    <div class="cards-grid"><details class="card"><summary class="card-summary"><span class="c-tkr">NVDA</span><span class="c-px mono">$204.12</span><span class="c-chg mono gain">+3.65%</span><span class="c-take">3.7% rally exceeds the 3% threshold.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">NVIDIA Corporation</span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">145.8M shares, 0.9x average.</span></div><div class="d-row"><span class="d-label">Flags</span><span class="d-val">price up 3.7%</span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">DELL</span><span class="c-px mono">$431.97</span><span class="c-chg mono gain">+3.52%</span><span class="c-take">3.5% rally exceeds the 3% threshold.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Dell Technologies Inc.</span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">9.0M shares, 1.0x average.</span></div><div class="d-row"><span class="d-label">Flags</span><span class="d-val">price up 3.5%</span></div><div class="d-row"><span class="d-label">SEC EDGAR</span><span class="d-val"><span class="badge b-edgar-sell">EDGAR INSIDER SELL</span><div class="d-sub">insider selling: 5 open-market sale(s) in 7d</div></span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">CRWD</span><span class="c-px mono">$191.12</span><span class="c-chg mono loss">-1.80%</span><span class="c-take">Quiet session, price and volume within normal range.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">CrowdStrike Holdings, Inc.</span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">7.5M shares, 0.6x average.</span></div><div class="d-row"><span class="d-label">SEC EDGAR</span><span class="d-val"><span class="badge b-edgar-sell">EDGAR INSIDER SELL</span><div class="d-sub">insider selling: 3 open-market sale(s) in 7d</div></span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">CAT</span><span class="c-px mono">$948.08</span><span class="c-chg mono gain">+0.85%</span><span class="c-take">Price and volume within normal range.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Caterpillar Inc.</span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">2.7M shares, 0.9x average.</span></div><div class="d-row"><span class="d-label">News</span><span class="d-val"><span class="badge b-news">M&amp;A</span> Caterpillar acquires Skycatch to expand mining technology portfolio<div class="d-sub">Skycatch technology enables the collection and processing of high-frequency, high-precision spatial data at a large scale.</div></span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">ORCL</span><span class="c-px mono">$140.49</span><span class="c-chg mono loss">-0.78%</span><span class="c-take">Quiet session, price and volume within normal range.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Oracle Corporation</span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">28.8M shares, 1.0x average.</span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">MRVL</span><span class="c-px mono">$231.71</span><span class="c-chg mono gain">+0.44%</span><span class="c-take">Quiet session, price and volume within normal range.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Marvell Technology, Inc.</span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">24.6M shares, 0.6x average.</span></div></div></details></div>
+  </section>
+  <section id="tab-opp" class="tab-section">
+    <h2 class="section-title">Opportunity Scan</h2>
+    <div class="cards-grid"><details class="card"><summary class="card-summary"><span class="c-tkr">SMCI</span><span class="c-px mono">$28.17</span><span class="c-chg mono gain">+7.31%</span><span class="c-take">top gainer market-wide at +7.3%; 36M shares traded; Computer Hardware.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Super Micro Computer, Inc. <span class="d-exch">NASDAQ</span></span></div><div class="d-row"><span class="d-label">Signals</span><span class="d-val"><span class="badge b-gain">GAINER</span><span class="badge b-vol">VOL</span><span class="badge b-tech">TECH/SEMI</span><span class="d-score">2/4 signals</span></span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">35.6M shares, 0.7x average.</span></div><div class="d-row"><span class="d-label">Technicals</span><span class="d-val">RSI 43, price below VWAP, below Bollinger mid, below 50/200-day MAs, death-cross trend, MACD bearish, ATR 9.8% of price, momentum fading</span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">SIMO</span><span class="c-px mono">$313.30</span><span class="c-chg mono gain">+6.24%</span><span class="c-take">top gainer market-wide at +6.2%; Semiconductors.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Silicon Motion Technology Corporation <span class="d-exch">NASDAQ</span></span></div><div class="d-row"><span class="d-label">Signals</span><span class="d-val"><span class="badge b-gain">GAINER</span><span class="badge b-tech">TECH/SEMI</span><span class="d-score">2/4 signals</span></span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">0.9M shares, 0.8x average.</span></div><div class="d-row"><span class="d-label">Technicals</span><span class="d-val">RSI 55, price above VWAP, above Bollinger mid, above 50/200-day MAs, golden-cross trend, MACD bearish, ATR 8.5% of price</span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">UMC</span><span class="c-px mono">$24.73</span><span class="c-chg mono gain">+5.60%</span><span class="c-take">top gainer market-wide at +5.6%; Semiconductors.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">United Microelectronics Corporation <span class="d-exch">NYSE</span></span></div><div class="d-row"><span class="d-label">Signals</span><span class="d-val"><span class="badge b-gain">GAINER</span><span class="badge b-tech">TECH/SEMI</span><span class="d-score">2/4 signals</span></span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">14.1M shares, 0.8x average.</span></div><div class="d-row"><span class="d-label">Technicals</span><span class="d-val">RSI 54, price above VWAP, above Bollinger mid, above 50/200-day MAs, golden-cross trend, MACD bearish, ATR 7.1% of price</span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">PENG</span><span class="c-px mono">$78.47</span><span class="c-chg mono gain">+25.13%</span><span class="c-take">top gainer market-wide at +25.1%; Information Technology Services.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">Penguin Solutions, Inc. <span class="d-exch">NASDAQ</span></span></div><div class="d-row"><span class="d-label">Signals</span><span class="d-val"><span class="badge b-gain">GAINER</span><span class="badge b-tech">TECH/SEMI</span><span class="d-score">1/4 signals</span></span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">13.7M shares, 4.4x average.</span></div><div class="d-row"><span class="d-label">Technicals</span><span class="d-val">RSI 62, price above VWAP, near upper Bollinger Band, above 50/200-day MAs, golden-cross trend, MACD bearish, ATR 10.6% of price, stretched to the upside</span></div><div class="d-row"><span class="d-label">SEC EDGAR</span><span class="d-val"><span class="badge b-edgar-event">EDGAR 8-K</span><div class="d-sub">8-K: earnings results</div></span></div></div></details><details class="card"><summary class="card-summary"><span class="c-tkr">WULF</span><span class="c-px mono">$22.83</span><span class="c-chg mono gain">+12.80%</span><span class="c-take">top gainer market-wide at +12.8%; 42M shares traded.</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">Company</span><span class="d-val">TeraWulf Inc. <span class="d-exch">NASDAQ</span></span></div><div class="d-row"><span class="d-label">Signals</span><span class="d-val"><span class="badge b-gain">GAINER</span><span class="badge b-vol">VOL</span><span class="d-score">2/4 signals</span></span></div><div class="d-row"><span class="d-label">Volume</span><span class="d-val mono">42.5M shares, 1.4x average.</span></div><div class="d-row"><span class="d-label">Technicals</span><span class="d-val">RSI 45, price below VWAP, below Bollinger mid, below 50-day MA, golden-cross trend, MACD bearish, ATR 10.6% of price, momentum fading</span></div></div></details></div>
+  </section>
+  <section id="tab-macro" class="tab-section">
+    <h2 class="section-title">Macro</h2>
+    <details class="card macro-card"><summary class="card-summary"><span class="c-tkr">US10Y</span><span class="c-px mono">4.55%</span><span class="macro-word">Elevated range</span><span class="c-take">10 year Treasury yield (FRED series DGS10).</span></summary><div class="card-detail"><div class="d-row"><span class="d-label">As of</span><span class="d-val mono">2026-07-07</span></div><div class="d-row"><span class="d-label">Reading</span><span class="d-val mono">4.55%. Elevated range.</span></div><div class="d-row"><span class="d-label">Context</span><span class="d-val">This is a relatively high level for the 10 year yield. It adds pressure on rate sensitive names such as growth and technology, because their future earnings are discounted more heavily.</span></div><div class="d-row"><span class="d-label">Source</span><span class="d-val">FRED series DGS10, Federal Reserve Bank of St. Louis.</span></div></div></details>
+  </section>
+  <section id="tab-news" class="tab-section">
+    <h2 class="section-title">News</h2>
+    <div class="news-list"><details class="card"><summary class="card-summary"><span class="c-tkr">CAT</span><span class="badge b-news">M&amp;A</span><span class="c-take">Caterpillar acquires Skycatch to expand mining technology portfolio</span></summary><div class="card-detail"><div class="d-row"><span class="d-val">Skycatch technology enables the collection and processing of high-frequency, high-precision spatial data at a large scale.</span></div></div></details></div>
+  </section>
+</main>
+<footer class="wrap foot">
+  Data: yfinance (primary), FMP (fallback), FRED (macro), Yahoo RSS (news), SEC EDGAR (filings), TradingView (technicals).
+  Tap any card to expand. Gains show green, losses show red.
+</footer>
+<script>
+  (function(){
+    function show(id){
+      var s = document.querySelectorAll('.tab-section');
+      for(var i=0;i<s.length;i++){ s[i].classList.toggle('active', s[i].id===id); }
+      var b = document.querySelectorAll('.tab-btn');
+      for(var j=0;j<b.length;j++){ b[j].classList.toggle('active', b[j].getAttribute('data-tab')===id); }
+      window.scrollTo(0,0);
+    }
+    var btns = document.querySelectorAll('.tab-btn');
+    for(var k=0;k<btns.length;k++){
+      btns[k].addEventListener('click', function(){ show(this.getAttribute('data-tab')); });
+    }
+  })();
+</script>
 </body>
 </html>
